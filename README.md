@@ -1,13 +1,14 @@
 # E-Reader Converter
 
-Automated, Dockerized converter for e-books and comics. Drop files into watched folders and pick them up on your device — no manual steps required.
+A self-hosted, Dockerized converter that automatically processes e-books and comics dropped into watched folders — no manual steps required.
 
-| Tool | Purpose | Input | Output |
-|------|---------|-------|--------|
-| **kepubify** | EPUB → Kobo format | `/Books_in` | `/Books_out` (`.kepub`) |
-| **KCC** | CBZ/CBR → device-optimised comic | `/Comics_in` | `/Comics_out` |
+**For Kobo users:** Converts `.epub` files to Kobo's native `.kepub` format using kepubify, giving you better performance and reading features than sideloaded EPUBs.
 
-A WebUI on port **5000** lets you configure the device profile and all conversion options at runtime without rebuilding the container.
+**For all devices:** Converts comic archives (`.cbz`, `.cbr`, `.zip`, `.rar`) into device-optimised files using Kindle Comic Converter (KCC), with full control over profile, cropping, splitting, gamma, and more.
+
+All settings are configurable at runtime via a WebUI on port 5000 — no container rebuild needed. Supports `PUID`/`PGID` permission mapping for NAS and multi-user environments. Failed files are flagged and skipped rather than retried in a loop.
+
+**Supported devices:** Kindle, Kobo, reMarkable, and any device KCC has a profile for.
 
 ---
 
@@ -35,7 +36,7 @@ http://<server-ip>:5000
 
 ```
 ereader-converter/
-├── books_in/        ← drop .epub / .kepub here
+├── books_in/        ← drop .epub files here (Kobo users only)
 ├── books_out/       ← converted .kepub files appear here
 ├── comics_in/       ← drop .cbz / .cbr / .zip / .rar here
 ├── comics_out/      ← converted files appear here
