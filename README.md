@@ -79,6 +79,11 @@ services:
       - /path/to/comics_in:/Comics_in
       - /path/to/comics_out:/Comics_out
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 ```
 
 ---
