@@ -31,7 +31,9 @@ DEFAULT_CONFIG = {
     'kcc_gamma': 'auto'
 }
 
+# Thread lock to prevent double-processing
 PROCESSING_LOCKS = set()
+lock_mutex = threading.Lock()
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -246,8 +248,6 @@ def handle_output_renaming(produced_file, target_dir, original_input):
     return True
 
 def process_file(filepath, c_type):
-    if filepath in PROCESSING_LOCKS: return
-    PROCESSING_LOCKS.add(filepath)
     try:
         if not wait_for_file_ready(filepath): return
         config = load_config()
@@ -264,6 +264,7 @@ def process_file(filepath, c_type):
             result = subprocess.run(cmd, capture_output=True, text=True)
         else:
             print(f"Running KCC on {filepath}", flush=True)
+            # Standard long-form arguments for stability
             cmd = ['kcc-c2e', '--profile', config['kcc_profile'], '--format', config['kcc_format'], 
                    '--splitter', config['kcc_splitter'], '--cropping', config['kcc_cropping'], '--output', temp_out]
             
@@ -274,7 +275,7 @@ def process_file(filepath, c_type):
             if config['kcc_blackborders']: cmd.append('--blackborders')
             if config['kcc_colorautocontrast']: cmd.append('--colorautocontrast')
             if config['kcc_upscale']: cmd.append('--upscale')
-            if config['kcc_metadatatitle']: cmd.append('--title')
+            if config['kcc_metadatatitle']: cmd.append('--title') # Replaces --metadatatitle which has issues
             if config['kcc_gamma'] and config['kcc_gamma'].lower() != 'auto':
                 cmd.extend(['--gamma', config['kcc_gamma']])
             
@@ -290,17 +291,28 @@ def process_file(filepath, c_type):
             if os.path.exists(filepath): os.rename(filepath, filepath + '.failed')
         if os.path.exists(temp_out): shutil.rmtree(temp_out)
     except Exception as e: print(f"Exception processing {filepath}: {e}", flush=True)
-    finally: PROCESSING_LOCKS.remove(filepath)
+    finally:
+        with lock_mutex: PROCESSING_LOCKS.remove(filepath)
 
 def scan_directories():
+    # SCAN BOOKS
     for root, _, files in os.walk(BOOKS_IN):
         for f in files:
+            path = os.path.join(root, f)
             if (f.lower().endswith('.epub') or f.lower().endswith('.kepub')) and not f.lower().endswith('.failed'):
-                threading.Thread(target=process_file, args=(os.path.join(root, f), 'book')).start()
+                with lock_mutex:
+                    if path not in PROCESSING_LOCKS:
+                        PROCESSING_LOCKS.add(path)
+                        threading.Thread(target=process_file, args=(path, 'book')).start()
+    # SCAN COMICS
     for root, _, files in os.walk(COMICS_IN):
         for f in files:
+            path = os.path.join(root, f)
             if (f.lower().endswith('.cbz') or f.lower().endswith('.cbr') or f.lower().endswith('.zip') or f.lower().endswith('.rar')) and not f.lower().endswith('.failed'):
-                threading.Thread(target=process_file, args=(os.path.join(root, f), 'comic')).start()
+                with lock_mutex:
+                    if path not in PROCESSING_LOCKS:
+                        PROCESSING_LOCKS.add(path)
+                        threading.Thread(target=process_file, args=(path, 'comic')).start()
 
 def watch_loop():
     while True:
