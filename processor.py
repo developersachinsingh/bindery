@@ -22,6 +22,11 @@ lock_mutex       = threading.Lock()
 LOG_BUFFER       = deque(maxlen=300)
 log_lock         = threading.Lock()
 
+# KCC cannot safely run multiple instances concurrently.
+# This semaphore ensures only one comic conversion runs at a time.
+# Books (kepubify) are unaffected and run in parallel.
+kcc_semaphore = threading.Semaphore(1)
+
 
 def log(msg):
     line = msg.rstrip()
@@ -83,9 +88,9 @@ def handle_output_renaming(produced_file, target_dir, original_input, in_base):
 
 
 def process_file(filepath, c_type):
-    short    = os.path.basename(filepath)[:24]
+    short    = os.path.basename(filepath)[:40]
     in_base  = BOOKS_IN if c_type == 'book' else COMICS_IN
-    temp_out = os.path.join('/tmp', os.path.basename(filepath) + '_' + uuid.uuid4().hex + '_out')
+    temp_out = os.path.join('/tmp', uuid.uuid4().hex + '_out')
     try:
         if not wait_for_file_ready(filepath):
             log(f">>> SKIP (not ready): {short}")
@@ -102,6 +107,7 @@ def process_file(filepath, c_type):
         if c_type == 'book':
             log(f">>> STARTING: kepubify on {short}")
             cmd = ['kepubify', '--calibre', '--inplace', '--output', temp_out, filepath]
+            _run_conversion(cmd, short)
 
         else:
             log(f">>> STARTING: KCC on {short}")
@@ -151,33 +157,44 @@ def process_file(filepath, c_type):
 
             cmd.append(filepath)
 
-        log(f">>> CMD: {' '.join(cmd)}")
+            log(f">>> QUEUED (waiting for KCC slot): {short}")
+            with kcc_semaphore:
+                log(f">>> CMD: {' '.join(cmd)}")
+                _run_conversion(cmd, short)
 
-        process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1,
-        )
-        for line in process.stdout:
-            log(f"[{short}] {line.rstrip()}")
-        process.wait()
-
-        if process.returncode == 0:
-            produced = get_newest_file(temp_out)
-            if handle_output_renaming(produced, target_dir, filepath, in_base):
-                log(f">>> SUCCESS: {short}")
-            else:
-                log(f">>> FAILED (no output file found): {short}")
+        produced = get_newest_file(temp_out)
+        if handle_output_renaming(produced, target_dir, filepath, in_base):
+            log(f">>> SUCCESS: {short}")
         else:
-            log(f">>> FAILED (exit {process.returncode}): {short}")
-            if os.path.exists(filepath):
-                os.rename(filepath, filepath + '.failed')
+            log(f">>> FAILED (no output file found): {short}")
 
+    except ConversionError as e:
+        log(f">>> FAILED (exit {e.returncode}): {short}")
+        if os.path.exists(filepath):
+            os.rename(filepath, filepath + '.failed')
     except Exception as e:
         log(f">>> ERROR: {short} — {e}")
     finally:
         shutil.rmtree(temp_out, ignore_errors=True)
         with lock_mutex:
             PROCESSING_LOCKS.discard(filepath)
+
+
+class ConversionError(Exception):
+    def __init__(self, returncode):
+        self.returncode = returncode
+
+
+def _run_conversion(cmd, short):
+    process = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1,
+    )
+    for line in process.stdout:
+        log(f"[{short}] {line.rstrip()}")
+    process.wait()
+    if process.returncode != 0:
+        raise ConversionError(process.returncode)
 
 
 def scan_directories():
