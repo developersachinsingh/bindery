@@ -39,11 +39,9 @@ def load_config():
             with open(CONFIG_FILE, 'r') as f:
                 config = json.load(f)
                 for k, v in DEFAULT_CONFIG.items():
-                    if k not in config:
-                        config[k] = v
+                    if k not in config: config[k] = v
                 return config
-        except Exception:
-            return DEFAULT_CONFIG
+        except Exception: return DEFAULT_CONFIG
     return DEFAULT_CONFIG
 
 def save_config(config):
@@ -226,8 +224,7 @@ def wait_for_file_ready(filepath):
         try:
             if not os.path.exists(filepath): return False
             current_size = os.path.getsize(filepath)
-            if current_size > 0 and current_size == last_size:
-                return True
+            if current_size > 0 and current_size == last_size: return True
             last_size = current_size
         except OSError: pass
         time.sleep(2)
@@ -267,18 +264,20 @@ def process_file(filepath, c_type):
             result = subprocess.run(cmd, capture_output=True, text=True)
         else:
             print(f"Running KCC on {filepath}", flush=True)
-            cmd = ['kcc-c2e', '-p', config['kcc_profile'], '-f', config['kcc_format'], 
-                   '--splitter', config['kcc_splitter'], '--cropping', config['kcc_cropping'], '-o', temp_out]
-            if config['kcc_manga_style']: cmd.append('-m')
-            if config['kcc_hq']: cmd.append('-q')
-            if config['kcc_stretch']: cmd.append('-s')
+            cmd = ['kcc-c2e', '--profile', config['kcc_profile'], '--format', config['kcc_format'], 
+                   '--splitter', config['kcc_splitter'], '--cropping', config['kcc_cropping'], '--output', temp_out]
+            
+            if config['kcc_manga_style']: cmd.append('--manga-style')
+            if config['kcc_hq']: cmd.append('--hq')
+            if config['kcc_stretch']: cmd.append('--stretch')
             if config['kcc_forcecolor']: cmd.append('--forcecolor')
-            if config['kcc_blackborders']: cmd.append('-b')
-            if config['kcc_colorautocontrast']: cmd.append('-c')
-            if config['kcc_upscale']: cmd.append('-u')
-            if config['kcc_metadatatitle']: cmd.append('-t')
+            if config['kcc_blackborders']: cmd.append('--blackborders')
+            if config['kcc_colorautocontrast']: cmd.append('--colorautocontrast')
+            if config['kcc_upscale']: cmd.append('--upscale')
+            if config['kcc_metadatatitle']: cmd.append('--title')
             if config['kcc_gamma'] and config['kcc_gamma'].lower() != 'auto':
-                cmd.extend(['-g', config['kcc_gamma']])
+                cmd.extend(['--gamma', config['kcc_gamma']])
+            
             cmd.append(filepath)
             result = subprocess.run(cmd, capture_output=True, text=True)
             
