@@ -10,7 +10,7 @@ from collections import deque
 from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
-
+VERSION = "1.0.0"
 CONFIG_DIR = '/app/config'
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'settings.json')
 COMICS_IN  = '/Comics_in'
@@ -155,7 +155,8 @@ HTML_TEMPLATE = """
 
     <h1>Bindery</h1>
     <p class="subtitle">Automated e-book and comic converter — scanning every 10 seconds</p>
-
+    <div style="font-size: 0.7rem; color: #444; margin-top: -18px; margin-bottom: 24px;">v{{ version }}</div>
+    
     {% if saved %}<div class="alert">Settings saved successfully.</div>{% endif %}
 
     <form method="POST">
@@ -486,7 +487,7 @@ def index():
     with log_lock:
         logs = list(LOG_BUFFER)
 
-    return render_template_string(HTML_TEMPLATE, config=config, saved=saved, logs=logs)
+    return render_template_string(HTML_TEMPLATE, config=config, saved=saved, logs=logs, version=VERSION)
 
 def wait_for_file_ready(filepath):
     last_size = -1
@@ -669,4 +670,5 @@ threading.Thread(target=watch_loop, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
+
 
