@@ -79,8 +79,14 @@ def move_output_file(produced_file, target_dir):
     if filename.endswith('.kepub.epub'):
         filename = filename[:-len('.kepub.epub')] + '.kepub'
     os.makedirs(target_dir, exist_ok=True)
-    final_path = os.path.join(target_dir, filename)
-    shutil.move(produced_file, final_path)
+    candidate = os.path.join(target_dir, filename)
+    if os.path.exists(candidate):
+        base, ext = os.path.splitext(filename)
+        counter = 2
+        while os.path.exists(candidate):
+            candidate = os.path.join(target_dir, f"{base}_{counter}{ext}")
+            counter += 1
+    shutil.move(produced_file, candidate)
 
 
 class ConversionError(Exception):
