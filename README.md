@@ -231,5 +231,5 @@ sudo systemctl enable --now rclone-bindery
 ## Updating
 
 ```bash
-cd ~/stacks/bindery && git pull && docker compose up -d --build
+cd /path/to/bindery && git pull && docker compose up -d --build
 ```
