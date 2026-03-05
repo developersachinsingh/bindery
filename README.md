@@ -1,4 +1,4 @@
-# ![Bindery](logo.png)
+# ![Bindery](assets/logo.png)
 
 A self-hosted, Dockerized converter that automatically processes e-books and comics dropped into watched folders — no manual steps required.
 
@@ -11,7 +11,7 @@ All settings are configurable at runtime via a WebUI on port 5000 — no contain
 **Supported devices:** Kindle, Kobo, reMarkable, and any device KCC has a profile for.
 
 
-![Bindery WebUI](webui.png)
+![Bindery WebUI](assets/webui.png)
 
 ### Use Cases
 
