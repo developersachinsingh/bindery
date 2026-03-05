@@ -1,5 +1,7 @@
 # ![Bindery](assets/logo.png)
 
+[![Tests](https://github.com/jarynclouatre/bindery/actions/workflows/test.yml/badge.svg)](https://github.com/jarynclouatre/bindery/actions/workflows/test.yml)
+
 A self-hosted, Dockerized converter that automatically processes e-books and comics dropped into watched folders — no manual steps required.
 
 **For Kobo users:** Converts `.epub` files to Kobo's native `.kepub` format using [kepubify](https://github.com/pgaskin/kepubify), giving you better performance and reading features than sideloaded EPUBs.
