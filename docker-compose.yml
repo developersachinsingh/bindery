@@ -4,6 +4,9 @@ services:
     container_name: ereader-converter
     ports:
       - "5000:5000"
+    environment:
+      - PUID=1000
+      - PGID=1000
     volumes:
       - ./config:/app/config
       - ./comics_in:/Comics_in
@@ -11,4 +14,3 @@ services:
       - ./books_in:/Books_in
       - ./books_out:/Books_out
     restart: unless-stopped
-    user: "1000:1000"

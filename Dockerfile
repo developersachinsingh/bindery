@@ -2,7 +2,6 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
 
-# Enable contrib + non-free repos for unrar and p7zip-rar
 RUN set -eux; \
     if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
       sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources; \
@@ -17,9 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     p7zip-rar \
     unrar \
     ca-certificates \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# Install kepubify (auto-pick arch)
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$arch" in \
@@ -33,18 +32,19 @@ RUN set -eux; \
     chmod +x /usr/local/bin/kepubify; \
     kepubify --version
 
-# Some tooling expects 7za
 RUN ln -sf /usr/bin/7z /usr/local/bin/7za \
     && ln -sf /usr/bin/7z /usr/local/bin/7zr || true
 
-# Install Python requirements
 RUN pip install --no-cache-dir Flask packaging "git+https://github.com/ciromattia/kcc.git"
 
 RUN mkdir -p /app /app/config /Comics_in /Comics_out /Books_in /Books_out
 
 WORKDIR /app
 COPY app.py /app/app.py
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 5000
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "app.py"]
