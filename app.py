@@ -84,6 +84,7 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <title>Bindery</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23141414'/><rect x='14' y='7' width='54' height='68' rx='6' fill='%235aabff'/><rect x='14' y='7' width='8' height='68' rx='4' fill='%233d8fe0'/></svg>">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -668,3 +669,4 @@ threading.Thread(target=watch_loop, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
+
