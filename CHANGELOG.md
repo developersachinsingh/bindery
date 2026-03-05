@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.2.0 — Tests, Health Endpoint & Batch Split Fix
+
+- Added test suite (19 tests covering config, processor logic, and Flask routes)
+- Added `/health` endpoint and Docker `HEALTHCHECK`
+- Fixed silent data loss when `kcc_batchsplit` produces multiple output files
+- Fixed `ConversionError` class definition order
+- Added `requirements-dev.txt` for running tests locally
+
 ## v2.1.0 — Concurrent Conversion Fix
 
 - Fixed a bug where multiple comics dropped at once could cause KCC to fail with "Failed to extract archive" due to concurrent execution
