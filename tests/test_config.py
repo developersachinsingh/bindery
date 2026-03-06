@@ -50,3 +50,34 @@ def test_save_config_creates_directory(tmp_path):
          patch.object(cfg, 'CONFIG_DIR', str(nested_dir)):
         cfg.save_config(cfg.DEFAULT_CONFIG)
     assert config_file.exists()
+
+
+def test_save_config_atomic_no_partial_file_on_error(tmp_path):
+    # If writing fails mid-way, the original settings.json must not be
+    # corrupted. We simulate this by making open() raise after the save
+    # starts, then confirm the original file is intact.
+    config_file = tmp_path / 'settings.json'
+    original = {'kcc_profile': 'KoLC'}
+    config_file.write_text(json.dumps(original))
+
+    real_open = open
+    call_count = [0]
+
+    def patched_open(path, mode='r', **kwargs):
+        if 'w' in mode and str(config_file.parent) in str(path):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise OSError("Simulated disk full")
+        return real_open(path, mode, **kwargs)
+
+    with patch.object(cfg, 'CONFIG_FILE', str(config_file)), \
+         patch.object(cfg, 'CONFIG_DIR', str(tmp_path)), \
+         patch('builtins.open', patched_open):
+        try:
+            cfg.save_config(cfg.DEFAULT_CONFIG)
+        except OSError:
+            pass
+
+    # Original file must still be valid and untouched
+    saved = json.loads(config_file.read_text())
+    assert saved == original

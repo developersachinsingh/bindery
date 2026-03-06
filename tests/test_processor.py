@@ -1,5 +1,6 @@
 import os
 import pytest
+from unittest.mock import patch, MagicMock
 
 import processor
 
@@ -82,3 +83,35 @@ def test_prune_empty_dirs_stops_at_nonempty_parent(tmp_path):
     processor.prune_empty_dirs(str(fake_file), str(tmp_path))
     assert not (tmp_path / 'a' / 'b').exists()
     assert (tmp_path / 'a').exists()
+
+
+def test_process_file_flags_failed_when_no_output(tmp_path):
+    # KCC exits 0 but produces no output files — source must be renamed .failed,
+    # not left in place to be retried on the next scan.
+    comics_in = tmp_path / 'comics_in'
+    comics_in.mkdir()
+    src = comics_in / 'test.cbz'
+    src.write_bytes(b'fake cbz')
+
+    mock_config = {k: v for k, v in processor.DEFAULT_CONFIG.items()} if hasattr(processor, 'DEFAULT_CONFIG') else {
+        'kcc_profile': 'KoLC', 'kcc_format': 'EPUB', 'kcc_splitter': '1',
+        'kcc_cropping': '2', 'kcc_croppingpower': '1.0', 'kcc_croppingminimum': '1',
+        'kcc_batchsplit': '0', 'kcc_gamma': '0', 'kcc_manga_style': False,
+        'kcc_hq': False, 'kcc_two_panel': False, 'kcc_webtoon': False,
+        'kcc_blackborders': True, 'kcc_whiteborders': False, 'kcc_forcecolor': True,
+        'kcc_colorautocontrast': True, 'kcc_colorcurve': False, 'kcc_stretch': True,
+        'kcc_upscale': False, 'kcc_nosplitrotate': False, 'kcc_rotate': False,
+        'kcc_nokepub': False, 'kcc_metadatatitle': False, 'kcc_author': '',
+        'kcc_customwidth': '', 'kcc_customheight': '',
+    }
+
+    with patch.object(processor, 'COMICS_IN', str(comics_in)), \
+         patch.object(processor, 'COMICS_OUT', str(tmp_path / 'comics_out')), \
+         patch('processor.load_config', return_value=mock_config), \
+         patch('processor.wait_for_file_ready', return_value=True), \
+         patch('processor._run_conversion', return_value=None):
+        # _run_conversion succeeds (no exception) but writes nothing to temp_out
+        processor.process_file(str(src), 'comic')
+
+    assert not src.exists(), "source file should have been removed or renamed"
+    assert (comics_in / 'test.cbz.failed').exists(), "source should be renamed .failed when no output produced"
