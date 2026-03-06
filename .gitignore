@@ -3,5 +3,6 @@ comics_in/
 comics_out/
 books_in/
 books_out/
+comics_raw/
 __pycache__/
 *.failed

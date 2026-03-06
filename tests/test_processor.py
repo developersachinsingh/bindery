@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 import processor
+from config import DEFAULT_CONFIG
 
 
 def test_get_output_files_empty_dir(tmp_path):
@@ -93,17 +94,7 @@ def test_process_file_flags_failed_when_no_output(tmp_path):
     src = comics_in / 'test.cbz'
     src.write_bytes(b'fake cbz')
 
-    mock_config = {k: v for k, v in processor.DEFAULT_CONFIG.items()} if hasattr(processor, 'DEFAULT_CONFIG') else {
-        'kcc_profile': 'KoLC', 'kcc_format': 'EPUB', 'kcc_splitter': '1',
-        'kcc_cropping': '2', 'kcc_croppingpower': '1.0', 'kcc_croppingminimum': '1',
-        'kcc_batchsplit': '0', 'kcc_gamma': '0', 'kcc_manga_style': False,
-        'kcc_hq': False, 'kcc_two_panel': False, 'kcc_webtoon': False,
-        'kcc_blackborders': True, 'kcc_whiteborders': False, 'kcc_forcecolor': True,
-        'kcc_colorautocontrast': True, 'kcc_colorcurve': False, 'kcc_stretch': True,
-        'kcc_upscale': False, 'kcc_nosplitrotate': False, 'kcc_rotate': False,
-        'kcc_nokepub': False, 'kcc_metadatatitle': False, 'kcc_author': '',
-        'kcc_customwidth': '', 'kcc_customheight': '',
-    }
+    mock_config = dict(DEFAULT_CONFIG)
 
     with patch.object(processor, 'COMICS_IN', str(comics_in)), \
          patch.object(processor, 'COMICS_OUT', str(tmp_path / 'comics_out')), \

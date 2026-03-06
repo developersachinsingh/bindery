@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: `comics_raw/` added to `.gitignore` to prevent accidentally tracking dropped image files
+- Fixed: `test_processor.py` mock config now imports directly from `config.py` instead of using a stale hardcoded fallback dict
+- Refactored: `app.py` now uses a `create_app()` factory — background threads no longer start at import time, removing the need for the import-time `threading.Thread` patch in `conftest.py`
+
 ## v2.5.0 — Bug Fixes
 
 - Fixed: gunicorn "Control server error: Permission denied" on every container start — disabled the unused control socket introduced in gunicorn 25.1.0
