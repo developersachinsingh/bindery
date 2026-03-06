@@ -8,6 +8,7 @@ import zipfile
 import threading
 
 from processor import log
+from config import ConfigDict
 
 COMICS_RAW             = '/Comics_raw'
 COMICS_RAW_PROCESSED   = '/Comics_raw/processed'
@@ -22,7 +23,7 @@ RAW_PROCESSING_LOCKS = set()
 raw_lock_mutex       = threading.Lock()
 
 
-def is_folder_stable(folderpath):
+def is_folder_stable(folderpath: str) -> bool:
     """Return True if folderpath exists, is non-empty, and no file has been
     modified within the last STABILITY_SECONDS seconds."""
     try:
@@ -45,7 +46,7 @@ def is_folder_stable(folderpath):
     return (time.time() - newest_mtime) >= STABILITY_SECONDS
 
 
-def _available_cbz_path(folder_name):
+def _available_cbz_path(folder_name: str) -> str:
     candidate = os.path.join(COMICS_IN, folder_name + '.cbz')
     if not os.path.exists(candidate):
         return candidate
@@ -57,7 +58,7 @@ def _available_cbz_path(folder_name):
         counter += 1
 
 
-def _available_dest_path(parent_dir, name):
+def _available_dest_path(parent_dir: str, name: str) -> str:
     candidate = os.path.join(parent_dir, name)
     if not os.path.exists(candidate):
         return candidate
@@ -69,7 +70,7 @@ def _available_dest_path(parent_dir, name):
         counter += 1
 
 
-def process_raw_folder(folderpath):
+def process_raw_folder(folderpath: str) -> None:
     """Validate, zip, and dispatch a flat image folder into the Comics_in pipeline.
 
     Rejects folders that contain subfolders or no image files, moving them to
@@ -140,7 +141,7 @@ def process_raw_folder(folderpath):
             RAW_PROCESSING_LOCKS.discard(folderpath)
 
 
-def scan_raw_directories():
+def scan_raw_directories() -> None:
     try:
         entries = os.listdir(COMICS_RAW)
     except OSError:
@@ -159,7 +160,7 @@ def scan_raw_directories():
                 threading.Thread(target=process_raw_folder, args=(full_path,), daemon=True).start()
 
 
-def raw_watch_loop():
+def raw_watch_loop() -> None:
     while True:
         try:
             scan_raw_directories()
