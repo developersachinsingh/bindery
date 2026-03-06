@@ -116,11 +116,11 @@ def process_file(filepath, c_type):
             return
 
         config  = load_config()
-        rel_dir = os.path.dirname(os.path.relpath(filepath, in_base))
+        rel_dir = os.path.relpath(os.path.dirname(filepath), in_base)
         if rel_dir == '.':
             rel_dir = ''
         out_base   = BOOKS_OUT if c_type == 'book' else COMICS_OUT
-        target_dir = os.path.join(out_base, rel_dir)
+        target_dir = os.path.join(out_base, rel_dir) if rel_dir else out_base
         os.makedirs(temp_out, exist_ok=True)
 
         if c_type == 'book':
@@ -193,6 +193,8 @@ def process_file(filepath, c_type):
             log(f">>> SUCCESS ({count} file{suffix}): {short}")
         else:
             log(f">>> FAILED (no output file found): {short}")
+            if os.path.exists(filepath):
+                os.rename(filepath, filepath + '.failed')
 
     except ConversionError as e:
         log(f">>> FAILED (exit {e.returncode}): {short}")

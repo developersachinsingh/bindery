@@ -12,8 +12,11 @@ if ! getent passwd abc >/dev/null 2>&1; then
     useradd -u "${PUID}" -g "${PGID}" -m -s /bin/sh abc
 fi
 
-# Force ownership of mapped volumes
-chown -R abc:abc /app/config /Comics_in /Comics_out /Books_in /Books_out /Comics_raw
+# Set ownership on the directories themselves, then only fix files that need it.
+# Avoids walking every file in large libraries on every container start.
+chown abc:abc /app/config /Comics_in /Comics_out /Books_in /Books_out /Comics_raw
+find /app/config /Comics_in /Comics_out /Books_in /Books_out /Comics_raw \
+     ! -user abc -exec chown abc:abc {} +
 
 # Drop privileges and execute application
 exec gosu abc "$@"

@@ -12,7 +12,7 @@ COMICS_RAW_PROCESSED   = '/Comics_raw/processed'
 COMICS_RAW_UNPROCESSED = '/Comics_raw/unprocessed'
 COMICS_IN              = '/Comics_in'
 
-IMAGE_EXTS     = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+IMAGE_EXTS      = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 IGNORABLE_FILES = {'.ds_store', 'thumbs.db', 'desktop.ini', '.localized'}
 STABILITY_SECONDS = 30
 
@@ -116,6 +116,13 @@ def process_raw_folder(folderpath):
         if os.path.exists(temp_cbz):
             try:
                 os.remove(temp_cbz)
+            except OSError:
+                pass
+        if os.path.exists(folderpath):
+            try:
+                os.makedirs(COMICS_RAW_UNPROCESSED, exist_ok=True)
+                dest = _available_dest_path(COMICS_RAW_UNPROCESSED, os.path.basename(folderpath))
+                shutil.move(folderpath, dest)
             except OSError:
                 pass
     finally:

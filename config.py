@@ -1,5 +1,6 @@
 import os
 import json
+import threading
 
 CONFIG_DIR  = '/app/config'
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'settings.json')
@@ -33,22 +34,26 @@ DEFAULT_CONFIG = {
     'kcc_customheight':      '',
 }
 
+_config_lock = threading.Lock()
+
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r') as f:
-                config = json.load(f)
-            for k, v in DEFAULT_CONFIG.items():
-                if k not in config:
-                    config[k] = v
-            return config
-        except Exception:
-            pass
-    return dict(DEFAULT_CONFIG)
+    with _config_lock:
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, 'r') as f:
+                    config = json.load(f)
+                for k, v in DEFAULT_CONFIG.items():
+                    if k not in config:
+                        config[k] = v
+                return config
+            except Exception:
+                pass
+        return dict(DEFAULT_CONFIG)
 
 
 def save_config(config):
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=4)
+    with _config_lock:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=4)

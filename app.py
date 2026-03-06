@@ -6,7 +6,7 @@ from processor import LOG_BUFFER, log_lock, log, watch_loop
 from raw_processor import raw_watch_loop
 
 app = Flask(__name__)
-VERSION = "2.4.0"
+VERSION = "2.5.0"
 
 
 @app.route('/health')
@@ -38,6 +38,9 @@ def index():
     return render_template('index.html', config=config, saved=saved, logs=logs, version=VERSION)
 
 
+# WARNING: do not add --preload to gunicorn. These threads must start in the
+# worker process after fork. --preload would start them in the master process,
+# they would be killed on fork, and the worker would run with dead watchers.
 log(">>> Bindery started. Watching /Books_in, /Comics_in, and /Comics_raw every 10s.")
 threading.Thread(target=watch_loop, daemon=True).start()
 threading.Thread(target=raw_watch_loop, daemon=True).start()

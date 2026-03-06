@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.5.0 — Bug Fixes
+
+- Fixed: files that convert successfully but produce no output were retried on every scan instead of being flagged `.failed`
+- Fixed: subdirectory path calculation for files in the root of `Comics_in` / `Books_in` used the wrong `os.path` call order, making the check dead code (worked by accident; now correct)
+- Fixed: raw folders that hit an unexpected error during zipping were left in `Comics_raw` and retried forever — they are now moved to `Comics_raw/unprocessed/` like other failures
+- Fixed: `load_config` and `save_config` had no locking; concurrent conversion threads reading config while a POST was writing it could get partial JSON and silently fall back to defaults
+- Added warning comment in `app.py` explaining why `--preload` must not be added to gunicorn
+- Improved: `entrypoint.sh` `chown` no longer walks every file in all volumes on every container start — only files not already owned by `abc` are touched
+
 ## v2.4.0 — Docker Hub Image
 
 - Bindery is now available as a pre-built image at `dinkeyes/bindery` on Docker Hub — no clone or build step required
