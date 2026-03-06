@@ -2,17 +2,17 @@
 
 ## v2.5.0 — Bug Fixes
 
-- Fixed: unexpected exceptions in `process_file` (e.g. permission errors, disk full) left the source file untouched and retried forever — now renamed `.failed` same as other failure paths
-- Fixed: WebUI form accepted non-numeric input for `croppingpower`, `croppingminimum`, `customwidth`, and `customheight` — values are now validated and clamped before saving, preventing bad arguments reaching KCC
-- Added comment to `wait_for_file_ready` explaining the 60s timeout and why SKIP does not rename to `.failed`
-- Fixed: gunicorn "Control server error: Permission denied" logged on every container start — gunicorn 25.1.0 introduced a control socket (for the `gunicornc` CLI) defaulting to `gunicorn.ctl` in the working directory `/app`, which the unprivileged `abc` user cannot write to; disabled with `--no-control-socket` as Bindery has no use for it
-- Fixed: `settings.json` could be left truncated if the process was killed mid-write (OOM, `docker stop` during a save), silently resetting all settings to defaults on next start — write is now atomic via temp file + `os.replace()`
+- Fixed: gunicorn "Control server error: Permission denied" on every container start — disabled the unused control socket introduced in gunicorn 25.1.0
 - Fixed: files that convert successfully but produce no output were retried on every scan instead of being flagged `.failed`
-- Fixed: subdirectory path calculation for files in the root of `Comics_in` / `Books_in` used the wrong `os.path` call order, making the check dead code (worked by accident; now correct)
+- Fixed: unexpected exceptions in `process_file` (e.g. permission errors, disk full) left the source file untouched and retried forever — now renamed `.failed` same as other failure paths
 - Fixed: raw folders that hit an unexpected error during zipping were left in `Comics_raw` and retried forever — they are now moved to `Comics_raw/unprocessed/` like other failures
-- Fixed: `load_config` and `save_config` had no locking; concurrent conversion threads reading config while a POST was writing it could get partial JSON and silently fall back to defaults
-- Added warning comment in `app.py` explaining why `--preload` must not be added to gunicorn
+- Fixed: subdirectory path calculation for files in the root of `Comics_in` / `Books_in` used the wrong `os.path` call order (worked by accident; now correct)
+- Fixed: `load_config` and `save_config` had no locking — concurrent conversion threads reading config while a POST was writing it could get partial JSON and silently fall back to defaults
+- Fixed: `settings.json` could be left truncated if the process was killed mid-write — write is now atomic via temp file + `os.replace()`
+- Fixed: WebUI accepted non-numeric input for `croppingpower`, `croppingminimum`, `customwidth`, and `customheight` — values are now validated and clamped before saving
 - Improved: `entrypoint.sh` `chown` no longer walks every file in all volumes on every container start — only files not already owned by `abc` are touched
+- Added comment to `wait_for_file_ready` explaining the 60s timeout and why SKIP does not rename to `.failed`
+- Added warning comment in `app.py` explaining why `--preload` must not be added to gunicorn
 
 ## v2.4.0 — Docker Hub Image
 
