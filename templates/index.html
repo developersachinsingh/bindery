@@ -99,6 +99,7 @@
     {% if saved %}<div class="alert">Settings saved successfully.</div>{% endif %}
 
     <form method="POST">
+    <input type="hidden" name="do_restart" id="do_restart" value="">
     <div class="card">
         <h2>KCC — Kindle Comic Converter</h2>
         <div class="grid-3">
@@ -433,12 +434,22 @@
 
 </div>
 
-<div id="restart-overlay">
+<div id="restart-overlay"{% if not restarting %} style="display:none"{% endif %}>
     <div class="restart-box">
         <div style="font-size:1.1rem;font-weight:700;color:#5aabff">Restarting…</div>
         <p>The container is restarting. This page will reload automatically.</p>
     </div>
 </div>
+{% if restarting %}
+<script>
+    document.getElementById("restart-overlay").style.display = "flex";
+    var riv = setInterval(function() {
+        fetch("/health").then(function(r) {
+            if (r.ok) { clearInterval(riv); window.location.href = "/"; }
+        }).catch(function(){});
+    }, 2000);
+</script>
+{% endif %}
 <script>
     var lb = document.getElementById('logbox');
     if (lb) lb.scrollTop = lb.scrollHeight;
@@ -480,18 +491,8 @@
     var restartBtn = document.getElementById('restart-btn');
     if (restartBtn) {
         restartBtn.addEventListener('click', function() {
-            var form = document.querySelector('form');
-            var data = new FormData(form);
-            function doRestart() {
-                document.getElementById('restart-overlay').classList.add('show');
-                fetch('/api/restart', {method: 'POST'}).catch(function(){});
-                var iv = setInterval(function() {
-                    fetch('/health').then(function(r) {
-                        if (r.ok) { clearInterval(iv); window.location.reload(); }
-                    }).catch(function(){});
-                }, 2000);
-            }
-            fetch('/', {method: 'POST', body: data}).then(doRestart).catch(doRestart);
+            document.getElementById('do_restart').value = '1';
+            document.querySelector('form').submit();
         });
     }
 

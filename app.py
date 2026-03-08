@@ -108,6 +108,16 @@ def create_app(start_threads: bool = True) -> Flask:
             config = _validate_post(config)
             save_config(config)
             saved = True
+            do_restart = bool(request.form.get('do_restart'))
+            if do_restart:
+                def _shutdown() -> None:
+                    time.sleep(0.8)
+                    os.kill(os.getpid(), signal.SIGTERM)
+                threading.Thread(target=_shutdown, daemon=True).start()
+                with log_lock:
+                    logs = list(LOG_BUFFER)
+                return render_template('index.html', config=config, saved=saved,
+                                       logs=logs, version=VERSION, restarting=True)
 
         with log_lock:
             logs = list(LOG_BUFFER)
