@@ -93,7 +93,8 @@
 
     <h1>Bindery</h1>
     <div class="version">v{{ version }}</div>
-    <p class="subtitle">Automated e-book and comic converter — scanning every 10 seconds</p>
+    <p class="subtitle">Automated e-book and comic converter —
+    {% if config.watcher_mode == "inotify" %}watching via inotify{% else %}scanning every 10 seconds{% endif %}</p>
 
     {% if saved %}<div class="alert">Settings saved successfully.</div>{% endif %}
 
@@ -413,8 +414,6 @@
             direct-write clients may miss events. Save your settings first, then restart.
             <br><button type="button" class="btn-restart" id="restart-btn">Save &amp; Restart</button>
         </div>
-    </div>
-        <p class="note">How long Bindery waits for a file to finish transferring before skipping it. Increase if files on slow network drives are frequently skipped. Range: 10–300 s.</p>
     </div>
     </form>
 
