@@ -11,6 +11,7 @@
 - Added: Watcher Mode selector in Bindery Settings with warning card explaining restart requirement and NFS/SMB limitations
 - Added: Restart Container button in UI — sends SIGTERM, Docker brings the container back, page auto-reloads when healthy
 - Added: `/api/restart` endpoint
+- Improved: inotify warning card Restart button now saves settings automatically before restarting — was previously a two-step process that caused confusion
 - Added: 20 new tests covering `_build_kcc_cmd` flag logic, `process_file` error paths, `scan_directories` dispatch and skip behaviour, `_validate_post` enum and clamp validation, and `/api/logs`
 
 ## v2.7.1 — WebUI Polish

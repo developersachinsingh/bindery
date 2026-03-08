@@ -411,7 +411,7 @@
             Not supported on network shares (NFS, SMB/CIFS) — files on those mounts will be silently missed.
             Most SFTP clients that use temp-then-rename (e.g. WinSCP) work correctly;
             direct-write clients may miss events. Save your settings first, then restart.
-            <br><button type="button" class="btn-restart" id="restart-btn">Restart Container</button>
+            <br><button type="button" class="btn-restart" id="restart-btn">Save &amp; Restart</button>
         </div>
     </div>
         <p class="note">How long Bindery waits for a file to finish transferring before skipping it. Increase if files on slow network drives are frequently skipped. Range: 10–300 s.</p>
@@ -479,13 +479,18 @@
     var restartBtn = document.getElementById('restart-btn');
     if (restartBtn) {
         restartBtn.addEventListener('click', function() {
-            document.getElementById('restart-overlay').classList.add('show');
-            fetch('/api/restart', {method: 'POST'}).catch(function(){});
-            var iv = setInterval(function() {
-                fetch('/health').then(function(r) {
-                    if (r.ok) { clearInterval(iv); window.location.reload(); }
-                }).catch(function(){});
-            }, 2000);
+            var form = document.querySelector('form');
+            var data = new FormData(form);
+            function doRestart() {
+                document.getElementById('restart-overlay').classList.add('show');
+                fetch('/api/restart', {method: 'POST'}).catch(function(){});
+                var iv = setInterval(function() {
+                    fetch('/health').then(function(r) {
+                        if (r.ok) { clearInterval(iv); window.location.reload(); }
+                    }).catch(function(){});
+                }, 2000);
+            }
+            fetch('/', {method: 'POST', body: data}).then(doRestart).catch(doRestart);
         });
     }
 
