@@ -1,18 +1,19 @@
 # Changelog
 
-## Unreleased
+## v2.8.0 — inotify Watcher Mode & WebUI Improvements
 
-- Fixed: `kcc_borders`, `kcc_gamma`, `kcc_profile`, `kcc_format`, `kcc_cropping`, `kcc_splitter`, and `kcc_batchsplit` were unvalidated string passthroughs from POST — invalid values now fall back to safe defaults instead of being written to `settings.json`
-- Fixed: kepubify pinned to v4.0.4 in Dockerfile — was previously downloading `latest` at build time, producing non-reproducible images
-- Added: `File Stability Timeout` setting in WebUI (10–300 s, default 60) — configures how long Bindery waits for a file to finish transferring before skipping it
-- Added: `/api/logs` JSON endpoint — activity log now live-polls every 5 s instead of requiring a full page reload
-- Added: persistent log written to `/app/config/bindery.log` — log history survives container restarts and is pre-loaded into the UI on startup (trimmed to 5000 lines)
-- Added: inotify watcher mode — instant file detection on local filesystems; poll remains the default and works everywhere including network shares
-- Added: Watcher Mode selector in Bindery Settings with warning card explaining restart requirement and NFS/SMB limitations
-- Added: Restart Container button in UI — sends SIGTERM, Docker brings the container back, page auto-reloads when healthy
+- Added: inotify watcher mode — instant file detection on local filesystems; poll remains the default and works everywhere including network shares (NFS, SMB)
+- Added: Bindery Settings card in WebUI — Watcher Mode selector and File Stability Timeout field
+- Added: Save & Restart button — saves settings and restarts the container in one step; page auto-reloads when healthy
 - Added: `/api/restart` endpoint
-- Improved: inotify warning card Restart button now saves settings automatically before restarting — was previously a two-step process that caused confusion
-- Added: 20 new tests covering `_build_kcc_cmd` flag logic, `process_file` error paths, `scan_directories` dispatch and skip behaviour, `_validate_post` enum and clamp validation, and `/api/logs`
+- Added: `/api/logs` endpoint — activity log live-polls every 5 s instead of requiring a page reload
+- Added: persistent log at `/app/config/bindery.log` — survives restarts, pre-loaded into UI on startup (trimmed to 5000 lines)
+- Added: `File Stability Timeout` setting in WebUI (10–300 s, default 60)
+- Fixed: `kcc_borders`, `kcc_gamma`, `kcc_profile`, `kcc_format`, `kcc_cropping`, `kcc_splitter`, and `kcc_batchsplit` were unvalidated — invalid POST values now fall back to safe defaults
+- Fixed: kepubify pinned to v4.0.4 in Dockerfile — was previously downloading `latest` at build time
+- Improved: page subtitle reflects active watcher mode (polling vs inotify)
+- Improved: SVG logo header replaces plain text title
+- Added: 20 new tests covering `_build_kcc_cmd`, `process_file` error paths, `scan_directories`, `_validate_post`, and `/api/logs`
 
 ## v2.7.1 — WebUI Polish
 
