@@ -4,10 +4,12 @@ import os
 import sys
 import time
 import uuid
+import json
 import shutil
 import threading
 import subprocess
 from collections import deque
+from datetime import datetime, timezone
 
 from config import load_config, ConfigDict
 
@@ -20,16 +22,21 @@ BOOK_EXTS  = {'.epub'}
 COMIC_EXTS = {'.cbz', '.cbr', '.zip', '.rar'}
 
 PROCESSING_LOCKS = set()
-lock_mutex       = threading.Lock()
-LOG_BUFFER       = deque(maxlen=300)
-log_lock         = threading.Lock()
+lock_mutex        = threading.Lock()
+LOG_BUFFER        = deque(maxlen=300)
+log_lock          = threading.Lock()
 
 # KCC cannot safely run multiple instances concurrently.
 # This semaphore ensures only one comic conversion runs at a time.
 # Books (kepubify) are unaffected and run in parallel.
 kcc_semaphore = threading.Semaphore(1)
 
-LOG_FILE = '/app/config/bindery.log'
+LOG_FILE  = '/app/config/bindery.log'
+JOBS_FILE = '/app/config/jobs.json'
+
+JOB_REGISTRY: dict[str, dict] = {}
+job_registry_lock = threading.Lock()
+MAX_JOBS = 500
 
 
 def log(msg: str) -> None:
@@ -63,6 +70,134 @@ def _load_log_history() -> None:
                 LOG_BUFFER.append(line)
     except OSError:
         pass
+
+
+def _load_job_registry() -> None:
+    """Load persisted job registry from disk on startup.
+
+    Uses .update() on the existing dict so that references imported by other
+    modules (e.g. app.py) continue to point at the same object.
+    """
+    try:
+        with open(JOBS_FILE) as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            with job_registry_lock:
+                JOB_REGISTRY.update(data)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+
+def _save_job_registry() -> None:
+    """Atomically write job registry to disk. Caller must hold job_registry_lock."""
+    try:
+        os.makedirs(os.path.dirname(JOBS_FILE), exist_ok=True)
+        tmp = JOBS_FILE + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(JOB_REGISTRY, f)
+        os.replace(tmp, JOBS_FILE)
+    except OSError:
+        pass
+
+
+def _now() -> str:
+    """Return current UTC time as ISO-8601 string."""
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def _register_job(filepath: str, c_type: str) -> str:
+    """Create a new QUEUED job entry and return its ID."""
+    job_id = uuid.uuid4().hex
+    entry: dict = {
+        'id':       job_id,
+        'filename': os.path.basename(filepath),
+        'filepath': filepath,
+        'type':     c_type,
+        'state':    'queued',
+        'created':  _now(),
+        'started':  None,
+        'finished': None,
+        'error':    None,
+    }
+    with job_registry_lock:
+        JOB_REGISTRY[job_id] = entry
+        if len(JOB_REGISTRY) > MAX_JOBS:
+            # Prune oldest completed jobs first, then by created time
+            candidates = sorted(
+                JOB_REGISTRY,
+                key=lambda k: (
+                    0 if JOB_REGISTRY[k]['state'] in ('success', 'failed') else 1,
+                    JOB_REGISTRY[k].get('created') or '',
+                )
+            )
+            for k in candidates[:len(JOB_REGISTRY) - MAX_JOBS]:
+                del JOB_REGISTRY[k]
+        _save_job_registry()
+    return job_id
+
+
+def _update_job(job_id: str | None, **kwargs: object) -> None:
+    """Update fields on a job entry and persist. No-op if job_id is None or unknown."""
+    if job_id is None:
+        return
+    with job_registry_lock:
+        if job_id in JOB_REGISTRY:
+            JOB_REGISTRY[job_id].update(kwargs)
+            _save_job_registry()
+
+
+def _notify(event: str, filename: str, error: str | None = None) -> None:
+    """Send an Apprise notification if configured for this event type."""
+    try:
+        config = load_config()
+        urls   = config.get('apprise_urls', '').strip()
+        if not urls:
+            return
+        if event == 'success' and not config.get('notify_on_success', True):
+            return
+        if event == 'failure' and not config.get('notify_on_failure', True):
+            return
+        import apprise
+        ap = apprise.Apprise()
+        for url in urls.splitlines():
+            url = url.strip()
+            if url:
+                ap.add(url)
+        if event == 'success':
+            title = 'Bindery: Conversion complete'
+            body  = f'\u2713 {filename}'
+        else:
+            title = 'Bindery: Conversion failed'
+            body  = f'\u2717 {filename}' + (f'\n{error}' if error else '')
+        ap.notify(title=title, body=body)
+    except Exception as e:
+        log(f'>>> NOTIFY ERROR: {e}')
+
+
+def retry_file(job_id: str) -> bool:
+    """Rename the .failed file back to its original name and re-dispatch it.
+
+    Returns True if the retry was successfully queued.
+    """
+    with job_registry_lock:
+        job = JOB_REGISTRY.get(job_id)
+    if not job or job['state'] != 'failed':
+        return False
+    original    = job['filepath']
+    failed_path = original + '.failed'
+    if not os.path.exists(failed_path):
+        return False
+    try:
+        os.rename(failed_path, original)
+    except OSError:
+        return False
+    _update_job(job_id, state='queued', error=None, started=None, finished=None)
+    c_type = job['type']
+    with lock_mutex:
+        if original not in PROCESSING_LOCKS:
+            PROCESSING_LOCKS.add(original)
+            threading.Thread(target=process_file, args=(original, c_type, job_id), daemon=True).start()
+    return True
 
 
 def wait_for_file_ready(filepath: str, timeout: int = 60) -> bool:
@@ -195,15 +330,28 @@ def _build_kcc_cmd(config: ConfigDict, filepath: str, temp_out: str) -> list[str
     return cmd
 
 
-def process_file(filepath: str, c_type: str) -> None:
+def process_file(filepath: str, c_type: str, job_id: str | None = None) -> None:
+    """Convert a single file, tracking state in the job registry."""
     short    = os.path.basename(filepath)[:40]
     in_base  = BOOKS_IN if c_type == 'book' else COMICS_IN
     temp_out = os.path.join('/tmp', uuid.uuid4().hex + '_out')
+
     try:
-        config  = load_config()
+        # Register inside try so PROCESSING_LOCKS.discard always runs in finally.
+        if job_id is None:
+            job_id = _register_job(filepath, c_type)
+
+        config = load_config()
         if not wait_for_file_ready(filepath, int(config.get('file_wait_timeout', 60))):
             log(f">>> SKIP (not ready): {short}")
+            # Remove job so the next scan creates a fresh one
+            with job_registry_lock:
+                JOB_REGISTRY.pop(job_id, None)
+                _save_job_registry()
             return
+
+        _update_job(job_id, state='processing', started=_now())
+
         rel_dir = os.path.relpath(os.path.dirname(filepath), in_base)
         if rel_dir == '.':
             rel_dir = ''
@@ -230,22 +378,32 @@ def process_file(filepath: str, c_type: str) -> None:
             if os.path.exists(filepath):
                 os.remove(filepath)
                 prune_empty_dirs(filepath, in_base)
-            count = len(produced)
+            count  = len(produced)
             suffix = 's' if count > 1 else ''
             log(f">>> SUCCESS ({count} file{suffix}): {short}")
+            _update_job(job_id, state='success', finished=_now())
+            _notify('success', os.path.basename(filepath))
         else:
             log(f">>> FAILED (no output file found): {short}")
             if os.path.exists(filepath):
                 os.rename(filepath, filepath + '.failed')
+            _update_job(job_id, state='failed', finished=_now(), error='no output produced')
+            _notify('failure', os.path.basename(filepath), 'no output produced')
 
     except ConversionError as e:
-        log(f">>> FAILED (exit {e.returncode}): {short}")
+        msg = f'exit {e.returncode}'
+        log(f">>> FAILED ({msg}): {short}")
         if os.path.exists(filepath):
             os.rename(filepath, filepath + '.failed')
+        _update_job(job_id, state='failed', finished=_now(), error=msg)
+        _notify('failure', os.path.basename(filepath), msg)
     except Exception as e:
-        log(f">>> ERROR: {short} — {e}")
+        msg = str(e)
+        log(f">>> ERROR: {short} — {msg}")
         if os.path.exists(filepath):
             os.rename(filepath, filepath + '.failed')
+        _update_job(job_id, state='failed', finished=_now(), error=msg)
+        _notify('failure', os.path.basename(filepath), msg)
     finally:
         shutil.rmtree(temp_out, ignore_errors=True)
         with lock_mutex:

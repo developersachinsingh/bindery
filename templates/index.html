@@ -35,6 +35,12 @@
             border-radius: 5px; color: #e0e0e0; font-size: .88rem; appearance: auto;
         }
         select:focus, input:focus { outline: none; border-color: #5aabff; }
+        textarea {
+            width: 100%; padding: 8px 10px; background: #222; border: 1px solid #363636;
+            border-radius: 5px; color: #e0e0e0; font-size: .8rem; resize: vertical;
+            font-family: inherit; line-height: 1.5;
+        }
+        textarea:focus { outline: none; border-color: #5aabff; }
         .sec { font-size: .7rem; font-weight: 700; color: #444; text-transform: uppercase;
                letter-spacing: .08em; margin: 18px 0 10px;
                padding-top: 14px; border-top: 1px solid #252525; }
@@ -93,6 +99,52 @@
         .restart-box p { margin-top: 10px; font-size: .88rem; color: #777; }
         optgroup { background: #1c1c1c; }
         option   { background: #222; color: #e0e0e0; }
+        /* Status table */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px;
+                 font-size: .68rem; font-weight: 700; text-transform: uppercase;
+                 letter-spacing: .05em; }
+        .badge-queued     { background: #222;    color: #666; }
+        .badge-processing { background: #1a2a3a; color: #5aabff; }
+        .badge-success    { background: #182818; color: #5db85d; }
+        .badge-failed     { background: #2a1818; color: #c96060; }
+        .status-scroll { max-height: 280px; overflow-y: auto; }
+        .status-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        .status-table th { color: #555; font-size: .7rem; text-transform: uppercase;
+                           letter-spacing: .06em; font-weight: 700;
+                           padding: 0 10px 10px 0; text-align: left;
+                           border-bottom: 1px solid #252525; white-space: nowrap; }
+        .status-table td { padding: 7px 10px 7px 0; border-bottom: 1px solid #1e1e1e;
+                           vertical-align: middle; }
+        .status-table tr:last-child td { border-bottom: none; }
+        .col-fn { color: #d8d8d8; word-break: break-all; }
+        .col-ts { color: #555; font-size: .74rem; white-space: nowrap; }
+        .btn-retry { padding: 3px 10px; background: #2a1818; border: 1px solid #5a2a2a;
+                     color: #c96060; border-radius: 4px; font-size: .72rem; font-weight: 700;
+                     cursor: pointer; transition: background .12s; }
+        .btn-retry:hover { background: #3a2020; }
+        .tbl-empty { color: #444; font-size: .82rem; text-align: center; padding: 22px 0; }
+        /* File browser */
+        .file-tabs { display: flex; gap: 10px; margin-bottom: 14px; }
+        .file-tab { padding: 4px 16px; border-radius: 20px; font-size: .78rem; font-weight: 700;
+                    cursor: pointer; border: 1px solid #2a2a2a; background: transparent;
+                    color: #555; transition: all .12s; }
+        .file-tab.active { background: #5aabff; color: #0a0a0a; border-color: #5aabff; }
+        .file-tab:not(.active):hover { border-color: #444; color: #999; }
+        .file-scroll { max-height: 280px; overflow-y: auto; }
+        .file-list { list-style: none; }
+        .file-item { display: flex; align-items: center; gap: 10px;
+                     padding: 7px 0; border-bottom: 1px solid #1e1e1e; }
+        .file-item:last-child { border-bottom: none; }
+        .file-name { color: #d8d8d8; font-size: .84rem; word-break: break-all; flex: 1; }
+        .file-meta { color: #444; font-size: .74rem; white-space: nowrap; }
+        .btn-dl { padding: 3px 10px; background: #182818; border: 1px solid #2a5a2a;
+                  color: #5db85d; border-radius: 4px; font-size: .72rem; font-weight: 700;
+                  text-decoration: none; white-space: nowrap; transition: background .12s; }
+        .btn-dl:hover { background: #1e3a1e; }
+        .file-empty { color: #444; font-size: .82rem; text-align: center; padding: 22px 0; }
+        .refresh-btn { background: none; border: none; color: #5aabff; font-size: .8rem;
+                       cursor: pointer; padding: 0; }
+        .refresh-btn:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -204,19 +256,17 @@
                     <label class="lbl">Batch Split</label>
                     <select name="kcc_batchsplit">
                         <option value="0" {% if config.kcc_batchsplit == '0' %}selected{% endif %}>Disabled</option>
-                        <option value="1" {% if config.kcc_batchsplit == '1' %}selected{% endif %}>Split into volumes</option>
-                        <option value="2" {% if config.kcc_batchsplit == '2' %}selected{% endif %}>Split into chapters</option>
+                        <option value="1" {% if config.kcc_batchsplit == '1' %}selected{% endif %}>Single volume</option>
+                        <option value="2" {% if config.kcc_batchsplit == '2' %}selected{% endif %}>Full batch</option>
                     </select>
                 </div>
-
-                <div class="sec">Image Processing</div>
 
                 <div class="field">
                     <label class="lbl">Cropping</label>
                     <select name="kcc_cropping">
                         <option value="0" {% if config.kcc_cropping == '0' %}selected{% endif %}>Disabled</option>
                         <option value="1" {% if config.kcc_cropping == '1' %}selected{% endif %}>Margins only</option>
-                        <option value="2" {% if config.kcc_cropping == '2' %}selected{% endif %}>Margins + page numbers</option>
+                        <option value="2" {% if config.kcc_cropping == '2' %}selected{% endif %}>Margins and content</option>
                     </select>
                 </div>
 
@@ -404,6 +454,7 @@
 
         <button type="submit" class="btn">Save Configuration</button>
     </div>
+
     <div class="card">
         <h2>Bindery Settings</h2>
         <div class="grid-3">
@@ -424,7 +475,25 @@
                            min="10" max="300" step="1"
                            value="{{ config.file_wait_timeout }}">
                 </div>
-                <p class="note">How long to wait for a file to finish transferring before skipping it. Increase for slow network drives. Range: 10–300 s.</p>
+                <p class="note">How long to wait for a file to finish transferring before skipping it. Increase for slow network drives. Range: 10–300 s.</p>
+            </div>
+            <div>
+                <div class="sec" style="margin-top:0;padding-top:0;border-top:none">Notifications (Apprise)</div>
+                <div class="field">
+                    <label class="lbl">Service URLs</label>
+                    <textarea name="apprise_urls" rows="3" placeholder="One URL per line&#10;e.g. ntfy://myserver.com/bindery&#10;e.g. discord://webhook_id/token">{{ config.apprise_urls }}</textarea>
+                </div>
+                <div class="checks">
+                    <label class="check">
+                        <input type="checkbox" name="notify_on_success" {% if config.notify_on_success %}checked{% endif %}>
+                        <span><div class="check-label">Notify on success</div></span>
+                    </label>
+                    <label class="check">
+                        <input type="checkbox" name="notify_on_failure" {% if config.notify_on_failure %}checked{% endif %}>
+                        <span><div class="check-label">Notify on failure</div></span>
+                    </label>
+                </div>
+                <p class="note" style="margin-top:10px">Supports ntfy, Discord, Slack, Telegram, Pushover, email, and 60+ others. See <a href="https://github.com/caronc/apprise/wiki" target="_blank" style="color:#5aabff">Apprise docs</a> for URL formats.</p>
             </div>
         </div>
         <div class="alert-warn" id="inotify-warn">
@@ -436,6 +505,43 @@
         </div>
     </div>
     </form>
+
+    <div class="card">
+        <div class="log-header">
+            <h2 class="log-title">Processing Status</h2>
+            <span class="log-refresh" style="color:#3a5c3a">&#9679; live</span>
+        </div>
+        <div class="status-scroll">
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="status-tbody">
+                    <tr><td colspan="5" class="tbl-empty">No jobs yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="log-header">
+            <h2 class="log-title">File Browser</h2>
+            <button class="refresh-btn" onclick="loadFiles()">&#8635; Refresh</button>
+        </div>
+        <div class="file-tabs">
+            <button class="file-tab active" data-tab="books"  onclick="switchTab('books')">Books Out</button>
+            <button class="file-tab"        data-tab="comics" onclick="switchTab('comics')">Comics Out</button>
+        </div>
+        <div class="file-scroll">
+            <div id="file-list"><div class="file-empty">Loading&hellip;</div></div>
+        </div>
+    </div>
 
     <div class="card">
         <div class="log-header">
@@ -470,6 +576,7 @@
 </script>
 {% endif %}
 <script>
+    /* ── Log ── */
     var lb = document.getElementById('logbox');
     if (lb) lb.scrollTop = lb.scrollHeight;
 
@@ -497,12 +604,13 @@
     }
     setInterval(pollLogs, 5000);
 
+    /* ── Inotify warning ── */
     var activeModeAtLoad = '{{ config.watcher_mode }}';
     function toggleInotifyWarn() {
         var sel = document.getElementById('watcher_mode');
         var selected = sel ? sel.value : '';
-        var needsRestart = selected !== activeModeAtLoad;
-        document.getElementById('inotify-warn').style.display = needsRestart ? 'block' : 'none';
+        document.getElementById('inotify-warn').style.display =
+            selected !== activeModeAtLoad ? 'block' : 'none';
     }
     var wmSel = document.getElementById('watcher_mode');
     if (wmSel) { wmSel.addEventListener('change', toggleInotifyWarn); toggleInotifyWarn(); }
@@ -515,6 +623,7 @@
         });
     }
 
+    /* ── Custom profile fields ── */
     function toggleCustomFields() {
         var isOther = document.getElementById('kcc_profile').value === 'OTHER';
         var display = isOther ? '' : 'none';
@@ -525,6 +634,108 @@
     }
     document.getElementById('kcc_profile').addEventListener('change', toggleCustomFields);
     toggleCustomFields();
+
+    /* ── Shared helpers ── */
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── Processing Status ── */
+    function fmtDuration(started, finished) {
+        if (!started) return '';
+        var end  = finished ? new Date(finished) : new Date();
+        var secs = Math.round((end - new Date(started)) / 1000);
+        if (secs < 60) return secs + 's';
+        return Math.floor(secs / 60) + 'm ' + (secs % 60) + 's';
+    }
+    function renderStatusTable(jobs) {
+        var tbody = document.getElementById('status-tbody');
+        if (!tbody) return;
+        if (!jobs.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">No jobs yet.</td></tr>';
+            return;
+        }
+        var rows = jobs.map(function(j) {
+            var started   = j.created ? new Date(j.created).toLocaleString() : '—';
+            var duration  = (j.state === 'processing' || j.finished)
+                ? ' &middot; ' + fmtDuration(j.started, j.finished) : '';
+            var typeLabel = j.type === 'book' ? 'Book' : 'Comic';
+            var action    = j.state === 'failed'
+                ? '<button class="btn-retry" onclick="retryJob(\'' + j.id + '\')">Retry</button>'
+                : '';
+            return '<tr>' +
+                '<td class="col-fn">' + escHtml(j.filename) + '</td>' +
+                '<td class="col-ts">' + typeLabel + '</td>' +
+                '<td><span class="badge badge-' + j.state + '">' + j.state + '</span></td>' +
+                '<td class="col-ts">' + started + duration + '</td>' +
+                '<td>' + action + '</td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = rows.join('');
+    }
+    function pollStatus() {
+        fetch('/api/status').then(function(r){return r.json();}).then(function(data){
+            renderStatusTable(data.jobs);
+        }).catch(function(){});
+    }
+    function retryJob(jobId) {
+        fetch('/api/retry', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({job_id: jobId})
+        }).then(function(){pollStatus();}).catch(function(){});
+    }
+    pollStatus();
+    setInterval(pollStatus, 5000);
+
+    /* ── File Browser ── */
+    var fileBrowserData = {books: [], comics: []};
+    var activeTab = 'books';
+    function fmtSize(bytes) {
+        if (bytes < 1024)    return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+    function renderFileList(folder) {
+        var container = document.getElementById('file-list');
+        if (!container) return;
+        var entries = fileBrowserData[folder] || [];
+        if (!entries.length) {
+            var label = folder === 'books' ? 'Books_out' : 'Comics_out';
+            container.innerHTML = '<div class="file-empty">No files in ' + label + '</div>';
+            return;
+        }
+        var items = entries.map(function(e) {
+            var url = '/api/files/download?folder=' + folder +
+                      '&name=' + encodeURIComponent(e.name);
+            var d   = new Date(e.mtime);
+            var ds  = d.toLocaleDateString() + ' ' +
+                      d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            return '<li class="file-item">' +
+                '<span class="file-name">' + escHtml(e.name) + '</span>' +
+                '<span class="file-meta">' + fmtSize(e.size) + ' &middot; ' + ds + '</span>' +
+                '<a href="' + url + '" class="btn-dl" download>Download</a>' +
+                '</li>';
+        });
+        container.innerHTML = '<ul class="file-list">' + items.join('') + '</ul>';
+    }
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.file-tab').forEach(function(t) {
+            t.classList.toggle('active', t.dataset.tab === tab);
+        });
+        renderFileList(tab);
+    }
+    function loadFiles() {
+        fetch('/api/files').then(function(r){return r.json();}).then(function(data){
+            fileBrowserData = data;
+            renderFileList(activeTab);
+        }).catch(function(){});
+    }
+    loadFiles();
+    setInterval(loadFiles, 30000);
 </script>
 </body>
 </html>

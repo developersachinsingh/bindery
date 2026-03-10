@@ -4,13 +4,19 @@ import os
 import signal
 import time
 import threading
-from flask import Flask, jsonify, request, render_template
+from datetime import datetime, timezone
+from flask import Flask, jsonify, request, render_template, send_file
 
 from config import DEFAULT_CONFIG, load_config, save_config, ConfigDict
-from processor import LOG_BUFFER, log_lock, log, watch_loop, inotify_watch_loop, _load_log_history
+from processor import (
+    LOG_BUFFER, log_lock, log, watch_loop, inotify_watch_loop,
+    _load_log_history, _load_job_registry,
+    JOB_REGISTRY, job_registry_lock, retry_file,
+    BOOKS_OUT, COMICS_OUT,
+)
 from raw_processor import raw_watch_loop, raw_inotify_watch_loop
 
-VERSION = "2.8.2"
+VERSION = "3.0.0"
 
 
 def _clamp(value: object, min_val: float, max_val: float, default: float) -> str:
@@ -63,6 +69,8 @@ def _validate_post(config: ConfigDict) -> ConfigDict:
     if config.get('watcher_mode') not in ('poll', 'inotify'):
         config['watcher_mode'] = 'poll'
 
+    config['apprise_urls'] = config.get('apprise_urls', '')
+
     return config
 
 
@@ -78,6 +86,63 @@ def create_app(start_threads: bool = True) -> Flask:
         with log_lock:
             logs = list(LOG_BUFFER)
         return jsonify({'logs': logs})
+
+    @app.route('/api/status')
+    def api_status():
+        with job_registry_lock:
+            jobs = list(JOB_REGISTRY.values())
+        jobs.sort(key=lambda j: j.get('created') or '', reverse=True)
+        return jsonify({'jobs': jobs})
+
+    @app.route('/api/retry', methods=['POST'])
+    def api_retry():
+        data   = request.get_json(silent=True) or {}
+        job_id = data.get('job_id', '')
+        if not job_id:
+            return jsonify({'error': 'missing job_id'}), 400
+        ok = retry_file(job_id)
+        return jsonify({'ok': ok})
+
+    @app.route('/api/files')
+    def api_files():
+        result = {}
+        for folder_name, base in (('books', BOOKS_OUT), ('comics', COMICS_OUT)):
+            entries: list[dict] = []
+            if os.path.isdir(base):
+                for root, _, files in os.walk(base):
+                    for f in sorted(files):
+                        full = os.path.join(root, f)
+                        rel  = os.path.relpath(full, base)
+                        try:
+                            stat = os.stat(full)
+                            entries.append({
+                                'name':  rel,
+                                'size':  stat.st_size,
+                                'mtime': datetime.fromtimestamp(
+                                    stat.st_mtime, tz=timezone.utc
+                                ).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            })
+                        except OSError:
+                            pass
+            entries.sort(key=lambda x: x['mtime'], reverse=True)
+            result[folder_name] = entries
+        return jsonify(result)
+
+    @app.route('/api/files/download')
+    def api_files_download():
+        folder  = request.args.get('folder', '')
+        name    = request.args.get('name', '')
+        allowed = {'books': BOOKS_OUT, 'comics': COMICS_OUT}
+        if folder not in allowed or not name:
+            return jsonify({'error': 'invalid request'}), 400
+        base     = os.path.realpath(allowed[folder])
+        filepath = os.path.realpath(os.path.join(base, name))
+        if not filepath.startswith(base + os.sep):
+            return jsonify({'error': 'invalid path'}), 400
+        if not os.path.isfile(filepath):
+            return jsonify({'error': 'not found'}), 404
+        return send_file(filepath, as_attachment=True,
+                         download_name=os.path.basename(filepath))
 
     @app.route('/api/restart', methods=['POST'])
     def api_restart():
@@ -97,14 +162,15 @@ def create_app(start_threads: bool = True) -> Flask:
                         'kcc_borders', 'kcc_author', 'kcc_customwidth', 'kcc_customheight'):
                 config[key] = request.form.get(key, DEFAULT_CONFIG.get(key, ''))
             for key in ('kcc_manga_style', 'kcc_hq', 'kcc_two_panel', 'kcc_webtoon',
-                        'kcc_forcecolor',
-                        'kcc_colorautocontrast', 'kcc_colorcurve', 'kcc_stretch',
-                        'kcc_upscale', 'kcc_nosplitrotate', 'kcc_rotate',
-                        'kcc_metadatatitle', 'kcc_nokepub'):
+                        'kcc_forcecolor', 'kcc_colorautocontrast', 'kcc_colorcurve',
+                        'kcc_stretch', 'kcc_upscale', 'kcc_nosplitrotate', 'kcc_rotate',
+                        'kcc_metadatatitle', 'kcc_nokepub',
+                        'notify_on_success', 'notify_on_failure'):
                 config[key] = key in request.form
             config['file_wait_timeout'] = request.form.get(
                 'file_wait_timeout', DEFAULT_CONFIG.get('file_wait_timeout', 60))
-            config['watcher_mode'] = request.form.get('watcher_mode', 'poll')
+            config['watcher_mode']  = request.form.get('watcher_mode', 'poll')
+            config['apprise_urls']  = request.form.get('apprise_urls', '')
             config = _validate_post(config)
             save_config(config)
             saved = True
@@ -129,6 +195,7 @@ def create_app(start_threads: bool = True) -> Flask:
     # they would be killed on fork, and the worker would run with dead watchers.
     if start_threads:
         _load_log_history()
+        _load_job_registry()
         _mode = load_config().get('watcher_mode', 'poll')
         if _mode == 'inotify':
             log(">>> Bindery started. Watching /Books_in, /Comics_in, and /Comics_raw via inotify.")

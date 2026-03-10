@@ -1,3 +1,13 @@
+## Unreleased — v3.0.0
+
+- Added: Processing Status card — live table showing every job (queued / processing / success / failed) with timestamps, duration, and a Retry button for failed files; persisted across restarts in `/app/config/jobs.json` (capped at 500 entries)
+- Added: File Browser card — browse and download files from Books_out and Comics_out directly from the UI; no Samba or SSH required
+- Added: Notifications via Apprise — configure one or more service URLs (ntfy, Discord, Slack, Telegram, Pushover, email, and 60+ others) with separate toggles for success and failure events
+- Added: `/api/status` endpoint — returns full job registry as JSON, sorted newest first
+- Added: `/api/retry` endpoint — re-queues a failed job by ID
+- Added: `/api/files` endpoint — lists output files with name, size, and mtime
+- Added: `/api/files/download` endpoint — serves output files as downloads with path-traversal protection
+
 ## v2.8.2 — Inotify Initial Scan Fix
 
 - Fixed: inotify watcher mode did not scan existing files on startup — files already sitting in Comics_in, Books_in, or Comics_raw when the container started were silently ignored; an initial scan now runs before the observer starts
