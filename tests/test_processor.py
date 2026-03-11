@@ -250,7 +250,6 @@ def test_scan_directories_dispatches_comic(tmp_path):
     with patch.object(processor, 'COMICS_IN', str(comics_in)), \
          patch.object(processor, 'BOOKS_IN',  str(books_in)), \
          patch('processor.threading') as mock_threading:
-        mock_threading.Lock.return_value = __import__('threading').Lock()
         def _fake_thread(target, args, daemon): dispatched.append(args); return MagicMock()
         mock_threading.Thread = MagicMock(side_effect=_fake_thread)
         processor.PROCESSING_LOCKS.clear()
@@ -269,8 +268,65 @@ def test_scan_directories_skips_failed_files(tmp_path):
     with patch.object(processor, 'COMICS_IN', str(comics_in)), \
          patch.object(processor, 'BOOKS_IN',  str(books_in)), \
          patch('processor.threading') as mock_threading:
-        mock_threading.Lock.return_value = __import__('threading').Lock()
         processor.PROCESSING_LOCKS.clear()
         processor.scan_directories()
 
     mock_threading.Thread.assert_not_called()
+
+
+# ── _notify ───────────────────────────────────────────────────────────────────
+
+def test_notify_no_urls_does_not_raise():
+    with patch('processor.load_config', return_value={**DEFAULT_CONFIG, 'apprise_urls': ''}):
+        processor._notify('success', 'test.cbz')
+
+
+def test_notify_success_suppressed_when_disabled():
+    mock_apprise = MagicMock()
+    with patch('processor.load_config', return_value={
+        **DEFAULT_CONFIG,
+        'apprise_urls': 'ntfy://example.com/test',
+        'notify_on_success': False,
+    }), patch.dict('sys.modules', {'apprise': mock_apprise}):
+        processor._notify('success', 'test.cbz')
+    mock_apprise.Apprise.assert_not_called()
+
+
+def test_notify_failure_suppressed_when_disabled():
+    mock_apprise = MagicMock()
+    with patch('processor.load_config', return_value={
+        **DEFAULT_CONFIG,
+        'apprise_urls': 'ntfy://example.com/test',
+        'notify_on_failure': False,
+    }), patch.dict('sys.modules', {'apprise': mock_apprise}):
+        processor._notify('failure', 'test.cbz')
+    mock_apprise.Apprise.assert_not_called()
+
+
+def test_notify_success_fires_with_correct_title():
+    mock_apprise = MagicMock()
+    mock_instance = MagicMock()
+    mock_apprise.Apprise.return_value = mock_instance
+    with patch('processor.load_config', return_value={
+        **DEFAULT_CONFIG,
+        'apprise_urls': 'ntfy://example.com/test',
+        'notify_on_success': True,
+    }), patch.dict('sys.modules', {'apprise': mock_apprise}):
+        processor._notify('success', 'test.cbz')
+    mock_instance.notify.assert_called_once()
+    assert mock_instance.notify.call_args.kwargs['title'] == 'Bindery: Conversion complete'
+
+
+def test_notify_failure_fires_with_error_in_body():
+    mock_apprise = MagicMock()
+    mock_instance = MagicMock()
+    mock_apprise.Apprise.return_value = mock_instance
+    with patch('processor.load_config', return_value={
+        **DEFAULT_CONFIG,
+        'apprise_urls': 'ntfy://example.com/test',
+        'notify_on_failure': True,
+    }), patch.dict('sys.modules', {'apprise': mock_apprise}):
+        processor._notify('failure', 'test.cbz', 'exit 1')
+    mock_instance.notify.assert_called_once()
+    assert mock_instance.notify.call_args.kwargs['title'] == 'Bindery: Conversion failed'
+    assert 'exit 1' in mock_instance.notify.call_args.kwargs['body']

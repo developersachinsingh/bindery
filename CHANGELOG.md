@@ -1,3 +1,15 @@
+## v3.0.1 — Bug Fixes & Housekeeping
+
+- Fixed: `entrypoint.sh` crashed on startup when `PUID`/`PGID` matched an existing system UID/GID — added `--non-unique` to `groupadd` and `useradd`
+- Fixed: `wait_for_file_ready` waited up to 2 s less than configured on odd timeout values — loop count now uses ceiling division
+- Fixed: `_notify` used hardcoded `True` fallbacks instead of `DEFAULT_CONFIG` values — now consistent if defaults ever change
+- Improved: comic conversions now log `>>> STARTING` when the KCC semaphore is acquired, matching book conversion log style
+- Added: `.dockerignore` to reduce Docker build context (excludes tests, assets, docs, and dev files)
+- Added: `apprise` to `requirements-dev.txt` so notification tests can run in CI
+- Added: 5 unit tests covering `_notify` (no URLs, suppressed success, suppressed failure, success fires, failure fires with error)
+- Fixed: removed dead `mock_threading.Lock` setup line from `test_scan_directories_dispatches_comic`
+- Fixed: removed orphaned `# Changelog` heading stranded mid-file in `CHANGELOG.md`
+
 ## v3.0.0 — Status, File Browser & Notifications
 
 - Added: Processing Status card — live table showing every job (queued / processing / success / failed) with timestamps, duration, and a Retry button for failed files; persisted across restarts in `/app/config/jobs.json` (capped at 500 entries)
@@ -13,7 +25,6 @@
 
 - Fixed: inotify watcher mode did not scan existing files on startup — files already sitting in Comics_in, Books_in, or Comics_raw when the container started were silently ignored; an initial scan now runs before the observer starts
 
-# Changelog
 
 ## v2.8.1 — Bug Fixes & Project Structure
 

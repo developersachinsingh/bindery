@@ -6,10 +6,10 @@ PGID=${PGID:-1000}
 
 # Create internal user matching the host UID/GID
 if ! getent group abc >/dev/null 2>&1; then
-    groupadd -g "${PGID}" abc
+    groupadd --non-unique -g "${PGID}" abc
 fi
 if ! getent passwd abc >/dev/null 2>&1; then
-    useradd -u "${PUID}" -g "${PGID}" -m -s /bin/sh abc
+    useradd --non-unique -u "${PUID}" -g "${PGID}" -m -s /bin/sh abc
 fi
 
 # Set ownership on the directories themselves, then only fix files that need it.

@@ -11,7 +11,7 @@ import subprocess
 from collections import deque
 from datetime import datetime, timezone
 
-from config import load_config, ConfigDict
+from config import DEFAULT_CONFIG, load_config, ConfigDict
 
 COMICS_IN  = '/Comics_in'
 COMICS_OUT = '/Comics_out'
@@ -153,9 +153,9 @@ def _notify(event: str, filename: str, error: str | None = None) -> None:
         urls   = config.get('apprise_urls', '').strip()
         if not urls:
             return
-        if event == 'success' and not config.get('notify_on_success', True):
+        if event == 'success' and not config.get('notify_on_success', DEFAULT_CONFIG['notify_on_success']):
             return
-        if event == 'failure' and not config.get('notify_on_failure', True):
+        if event == 'failure' and not config.get('notify_on_failure', DEFAULT_CONFIG['notify_on_failure']):
             return
         import apprise
         ap = apprise.Apprise()
@@ -208,7 +208,7 @@ def wait_for_file_ready(filepath: str, timeout: int = 60) -> bool:
     Only definitive failures rename to .failed.
     """
     last_size = -1
-    for _ in range(max(1, timeout // 2)):
+    for _ in range(max(1, (timeout + 1) // 2)):
         try:
             if not os.path.exists(filepath):
                 return False
@@ -368,6 +368,7 @@ def process_file(filepath: str, c_type: str, job_id: str | None = None) -> None:
             cmd = _build_kcc_cmd(config, filepath, temp_out)
             log(f">>> QUEUED: {short}")
             with kcc_semaphore:
+                log(f">>> STARTING: kcc-c2e on {short}")
                 log(f">>> CMD: {' '.join(cmd)}")
                 _run_conversion(cmd, short)
 

@@ -1,0 +1,7 @@
+.git
+tests/
+assets/
+*.md
+requirements-dev.txt
+pyproject.toml
+docker-compose*.yml
